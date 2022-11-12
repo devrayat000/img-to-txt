@@ -2,6 +2,7 @@ import { createWorker } from "tesseract.js";
 import express from "express";
 import logger from "morgan";
 import multer from "multer";
+import cors from "cors";
 import fetch, { Headers } from "node-fetch";
 
 const app = express();
@@ -14,8 +15,39 @@ const worker = createWorker({
 });
 
 app.use(logger("tiny"));
+app.use(
+  cors({
+    credentials: true,
+    origin: ["localhost", "rononbd.com", "www.rononbd.com"],
+    methods: ["POST"],
+  })
+);
 
-app.post("/ocr/image", isAuthorized, upload.single("img"), async (req, res) => {
+app.post("/ocr/image", isAuthorized, upload.single("img"), recognizeImage);
+
+const port = process.env.PORT || 3001;
+const dashboardUrl = process.env.DASHBOARD_URL || "http://localhost:8000";
+
+app.listen(port);
+
+async function isAuthorized(req, res, next) {
+  const headers = new Headers(req.headers);
+  headers.set("Content-Type", "application/json");
+
+  const resp = await fetch(`${dashboardUrl}/api/authorize/`, {
+    headers,
+  });
+
+  if (resp.ok) {
+    return next();
+  }
+
+  const data = await resp.json();
+  res.send(data).end();
+  return;
+}
+
+async function recognizeImage(req, res) {
   await worker.load();
   await worker.loadLanguage("eng");
   await worker.initialize("eng");
@@ -29,27 +61,4 @@ app.post("/ocr/image", isAuthorized, upload.single("img"), async (req, res) => {
   res.json({ text }).end(async () => {
     await worker.terminate();
   });
-});
-
-const port = process.env.PORT || 3001;
-
-app.listen(port);
-
-async function isAuthorized(req, res, next) {
-  const headers = new Headers(req.headers);
-  headers.set("Content-Type", "application/json");
-
-  console.log("headers", Object.fromEntries(headers.entries()));
-
-  const resp = await fetch("http://localhost:8000/api/authorize/", {
-    headers,
-  });
-
-  if (resp.ok) {
-    return next();
-  }
-
-  const data = await resp.json();
-  res.send(data).end();
-  return;
 }
