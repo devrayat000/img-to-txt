@@ -19,11 +19,21 @@ app.use(
   cors({
     credentials: true,
     origin: ["localhost", "rononbd.com", "www.rononbd.com"],
-    methods: ["POST"],
+    methods: ["POST", "GET"],
   })
 );
 
 app.post("/ocr/image", isAuthorized, upload.single("img"), recognizeImage);
+
+app.get("/health", (req, res) => {
+  const data = {
+    uptime: process.uptime(),
+    message: "Ok",
+    date: new Date(),
+  };
+
+  res.status(200).send(data);
+});
 
 const port = process.env.PORT || 3001;
 const dashboardUrl = process.env.DASHBOARD_URL || "http://localhost:8000";
