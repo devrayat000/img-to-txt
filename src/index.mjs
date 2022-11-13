@@ -38,7 +38,29 @@ app.get("/health", (req, res) => {
 const port = process.env.PORT || 3001;
 const dashboardUrl = process.env.DASHBOARD_URL || "http://localhost:8000";
 
-app.listen(port);
+const server = app.listen(port);
+
+server.on("error", (error) => {
+  console.log(error.message);
+});
+server.on("listening", async () => {
+  console.log("listening at >_ http://localhost:%s", port);
+  await worker.load();
+  await worker.loadLanguage("eng");
+  await worker.initialize("eng");
+  await worker.loadLanguage("ben");
+  await worker.initialize("ben");
+});
+server.on("close", async () => {
+  await worker.terminate();
+});
+
+process.on("SIGTERM", () => {
+  console.log("SIGTERM signal received: closing HTTP server");
+  server.close(() => {
+    console.log("HTTP server closed");
+  });
+});
 
 async function isAuthorized(req, res, next) {
   const headers = new Headers(req.headers);
@@ -58,17 +80,9 @@ async function isAuthorized(req, res, next) {
 }
 
 async function recognizeImage(req, res) {
-  await worker.load();
-  await worker.loadLanguage("eng");
-  await worker.initialize("eng");
-  await worker.loadLanguage("ben");
-  await worker.initialize("ben");
-
   const {
     data: { text },
   } = await worker.recognize(req.file.buffer);
 
-  res.json({ text }).end(async () => {
-    await worker.terminate();
-  });
+  res.json({ text }).end();
 }
