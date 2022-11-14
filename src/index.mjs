@@ -1,10 +1,13 @@
 import { URL } from "node:url";
+import { createServer } from "node:http";
+import fs from "node:fs";
 import { createWorker } from "tesseract.js";
 import express from "express";
 import logger from "morgan";
 import multer from "multer";
 import cors from "cors";
-import fetch, { Headers } from "node-fetch";
+import { Headers } from "node-fetch";
+import axios from "axios";
 
 const app = express();
 
@@ -15,6 +18,7 @@ const worker = createWorker({
   logger: (m) => console.log(m),
 });
 
+app.set("trust proxy", true);
 app.use(logger("tiny"));
 app.use(
   cors({
@@ -37,10 +41,17 @@ app.get("/health", (req, res) => {
 });
 
 const port = process.env.PORT || 3001;
-const dashboardUrl = process.env.DASHBOARD_URL || "http://localhost:8000";
+const dashboardUrl =
+  "https://rononbd.up.railway.app" || "http://localhost:8000";
 const publicUrl = process.env.PUBLIC_URL || `http://localhost:${port}`;
 
-const server = app.listen(port);
+const options = {
+  key: fs.readFileSync("key.pem"),
+  cert: fs.readFileSync("cert.pem"),
+  rejectUnauthorized: false,
+};
+
+const server = createServer({}, app).listen(port);
 
 server.on("error", (error) => {
   console.log(error.message);
@@ -68,20 +79,21 @@ const authorizeUrl = new URL("/api/authorize/", dashboardUrl);
 console.log("authorizeUrl:", authorizeUrl.toString());
 
 async function isAuthorized(req, res, next) {
-  const headers = new Headers(req.headers);
-  headers.set("Content-Type", "application/json");
+  try {
+    const headers = new Headers(req.headers);
+    headers.set("Content-Type", "application/json");
+    headers.set("host", "img-to-txt-production.up.railway.app");
 
-  const resp = await fetch(authorizeUrl.toString(), {
-    headers,
-  });
-
-  if (resp.ok) {
+    await axios.get(authorizeUrl.toString(), {
+      headers: {
+        Authorization: req.headers.authorization,
+      },
+    });
+    console.log("completed fetch");
     return next();
+  } catch (error) {
+    res.send(error.response.data).end();
   }
-
-  const data = await resp.json();
-  res.send(data).end();
-  return;
 }
 
 async function recognizeImage(req, res) {
