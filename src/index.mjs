@@ -1,3 +1,4 @@
+import { URL } from "node:url";
 import { createWorker } from "tesseract.js";
 import express from "express";
 import logger from "morgan";
@@ -37,6 +38,7 @@ app.get("/health", (req, res) => {
 
 const port = process.env.PORT || 3001;
 const dashboardUrl = process.env.DASHBOARD_URL || "http://localhost:8000";
+const publicUrl = process.env.PUBLIC_URL || `http://localhost:${port}`;
 
 const server = app.listen(port);
 
@@ -44,7 +46,7 @@ server.on("error", (error) => {
   console.log(error.message);
 });
 server.on("listening", async () => {
-  console.log("listening at >_ http://localhost:%s", port);
+  console.log("listening at >_ %s", publicUrl);
   await worker.load();
   await worker.loadLanguage("eng");
   await worker.initialize("eng");
@@ -62,11 +64,13 @@ process.on("SIGTERM", () => {
   });
 });
 
+const authorizeUrl = new URL("/api/authorize/", dashboardUrl);
+
 async function isAuthorized(req, res, next) {
   const headers = new Headers(req.headers);
   headers.set("Content-Type", "application/json");
 
-  const resp = await fetch(`${dashboardUrl}/api/authorize/`, {
+  const resp = await fetch(authorizeUrl.toString(), {
     headers,
   });
 
