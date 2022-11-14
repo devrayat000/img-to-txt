@@ -65,6 +65,7 @@ process.on("SIGTERM", () => {
 });
 
 const authorizeUrl = new URL("/api/authorize/", dashboardUrl);
+console.log("authorizeUrl:", authorizeUrl.toString());
 
 async function isAuthorized(req, res, next) {
   const headers = new Headers(req.headers);
