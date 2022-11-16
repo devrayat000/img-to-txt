@@ -1,6 +1,5 @@
 import { URL } from "node:url";
 import { createServer } from "node:http";
-import fs from "node:fs";
 import { createWorker } from "tesseract.js";
 import express from "express";
 import logger from "morgan";
@@ -16,6 +15,7 @@ const upload = multer({ storage: storage });
 
 const worker = createWorker({
   logger: (m) => console.log(m),
+  errorHandler: console.log,
 });
 
 app.set("trust proxy", true);
@@ -28,7 +28,7 @@ app.use(
   })
 );
 
-app.post("/ocr/image", isAuthorized, upload.single("img"), recognizeImage);
+app.post("/ocr/image", /* isAuthorized,*/ upload.single("img"), recognizeImage);
 
 app.get("/health", (req, res) => {
   const data = {
@@ -41,17 +41,10 @@ app.get("/health", (req, res) => {
 });
 
 const port = process.env.PORT || 3001;
-const dashboardUrl =
-  "https://rononbd.up.railway.app" || "http://localhost:8000";
+const dashboardUrl = process.env.DASHBOARD_UTL || "http://localhost:8000";
 const publicUrl = process.env.PUBLIC_URL || `http://localhost:${port}`;
 
-const options = {
-  key: fs.readFileSync("key.pem"),
-  cert: fs.readFileSync("cert.pem"),
-  rejectUnauthorized: false,
-};
-
-const server = createServer({}, app).listen(port);
+const server = createServer(app).listen(port);
 
 server.on("error", (error) => {
   console.log(error.message);
@@ -59,10 +52,8 @@ server.on("error", (error) => {
 server.on("listening", async () => {
   console.log("listening at >_ %s", publicUrl);
   await worker.load();
-  await worker.loadLanguage("eng");
-  await worker.initialize("eng");
-  await worker.loadLanguage("ben");
-  await worker.initialize("ben");
+  await worker.loadLanguage("eng+ben+equ");
+  await worker.initialize("eng+ben+equ");
 });
 server.on("close", async () => {
   await worker.terminate();
@@ -97,9 +88,14 @@ async function isAuthorized(req, res, next) {
 }
 
 async function recognizeImage(req, res) {
-  const {
-    data: { text },
-  } = await worker.recognize(req.file.buffer);
+  try {
+    const {
+      data: { text },
+    } = await worker.recognize(req.file.buffer);
 
-  res.json({ text }).end();
+    res.json({ text }).end();
+  } catch (error) {
+    console.log({ error: error.message });
+    res.status(500).json({ error: error.message }).end();
+  }
 }
