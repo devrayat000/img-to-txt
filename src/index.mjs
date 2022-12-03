@@ -20,12 +20,7 @@ const worker = createWorker({
 
 app.set("trust proxy", true);
 app.use(logger("tiny"));
-app.use(
-  cors({
-    origin: "*",
-    methods: ["POST", "GET"],
-  })
-);
+app.use(cors());
 
 app.post("/ocr/image", isAuthorized, upload.single("img"), recognizeImage);
 
