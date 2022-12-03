@@ -22,13 +22,12 @@ app.set("trust proxy", true);
 app.use(logger("tiny"));
 app.use(
   cors({
-    credentials: true,
-    origin: ["localhost", "rononbd.com", "www.rononbd.com"],
+    origin: "*",
     methods: ["POST", "GET"],
   })
 );
 
-app.post("/ocr/image", /* isAuthorized,*/ upload.single("img"), recognizeImage);
+app.post("/ocr/image", isAuthorized, upload.single("img"), recognizeImage);
 
 app.get("/health", (req, res) => {
   const data = {
