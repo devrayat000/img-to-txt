@@ -20,7 +20,7 @@ const worker = createWorker({
 
 app.set("trust proxy", true);
 app.use(logger("tiny"));
-app.use(cors());
+app.use(cors({ origin: "*" }));
 
 app.post("/ocr/image", isAuthorized, upload.single("img"), recognizeImage);
 
@@ -35,7 +35,7 @@ app.get("/health", (req, res) => {
 });
 
 const port = process.env.PORT || 3001;
-const dashboardUrl = process.env.DASHBOARD_UTL || "http://localhost:8000";
+const dashboardUrl = process.env.DASHBOARD_URL || "http://localhost:8000";
 const publicUrl = process.env.PUBLIC_URL || `http://localhost:${port}`;
 
 const server = createServer(app).listen(port);
