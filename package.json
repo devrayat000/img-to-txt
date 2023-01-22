@@ -19,7 +19,7 @@
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "node-fetch": "^3.3.0",
-    "tesseract.js": "^3.0.3"
+    "tesseract.js": "^4.0.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.12",
