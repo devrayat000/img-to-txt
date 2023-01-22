@@ -13,10 +13,8 @@ const app = express();
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-const worker = createWorker({
-  logger: (m) => console.log(m),
-  errorHandler: console.log,
-});
+/** @type {import('tesseract.js').Worker} */
+let worker;
 
 app.set("trust proxy", true);
 app.use(logger("tiny"));
@@ -45,7 +43,10 @@ server.on("error", (error) => {
 });
 server.on("listening", async () => {
   console.log("listening at >_ %s", publicUrl);
-  await worker.load();
+  worker = await createWorker({
+    logger: (m) => console.log(m),
+    errorHandler: console.log,
+  });
   await worker.loadLanguage("eng+ben+equ");
   await worker.initialize("eng+ben+equ");
 });
